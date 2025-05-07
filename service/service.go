@@ -31,6 +31,11 @@ func New(repo repository.LoanRepository) LoanEngine {
 }
 
 func (l *loanEngine) Create(loan *entity.Loan) (*entity.Loan, error) {
+
+	// Calculate the ROI based on the loan amount and rate
+	loan.ROI = (float64(loan.Rate) / 100) * float64(loan.Amount)
+
+	// Set the loan state to Proposed
 	loan.State = &entity.Proposed{}
 
 	l.repo.InsertLoan(*loan)

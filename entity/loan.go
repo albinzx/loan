@@ -57,8 +57,9 @@ type Borrower struct {
 // Investor represents an investor in the system.
 // It contains information about the investor ID and name.
 type Investor struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 func (a Approval) Empty() bool {
