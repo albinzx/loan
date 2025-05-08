@@ -1,36 +1,39 @@
 package service
 
 import (
+	"context"
+	"log"
+
 	"github.com/albinzx/loan/entity"
 	"github.com/albinzx/loan/repository"
 )
 
 type LoanEngine interface {
 	// Create creates a new loan with the given details.
-	Create(loan *entity.Loan) (*entity.Loan, error)
+	Create(context.Context, *entity.Loan) (*entity.Loan, error)
 	// Get retrieves a loan by its ID.
-	Get(id int64) (*entity.Loan, error)
-	// ApproveLoan approves a loan with the given ID and approval details.
-	Approve(int64, entity.Approval) (*entity.Loan, error)
-	// InvestLoan invests in a loan with the given ID and investment details.
-	Invest(int64, entity.Investment) (*entity.Loan, error)
-	// DisburseLoan disburses a loan with the given ID and disbursement details.
-	Disburse(int64, entity.Approval) (*entity.Loan, error)
-	// GetAll retrieves all loans.
-	GetByState(state string) ([]entity.Loan, error)
+	Get(context.Context, int64) (*entity.Loan, error)
+	// Approve approves a loan with the given ID and approval details.
+	Approve(context.Context, int64, entity.Approval) (*entity.Loan, error)
+	// Invest invests in a loan with the given ID and investment details.
+	Invest(context.Context, int64, entity.Investment) (*entity.Loan, error)
+	// Disburse disburses a loan with the given ID and disbursement details.
+	Disburse(context.Context, int64, entity.Approval) (*entity.Loan, error)
+	// GetByState retrieves loans based on state.
+	GetByState(context.Context, string) ([]entity.Loan, error)
 	// GetByBorrower retrieves loans by their borrower ID.
-	GetByBorrower(borrowerID int64) ([]entity.Loan, error)
+	GetByBorrower(context.Context, int64) ([]entity.Loan, error)
 }
 
-type loanEngine struct {
+type LoanService struct {
 	repo repository.LoanRepository
 }
 
-func New(repo repository.LoanRepository) LoanEngine {
-	return &loanEngine{repo: repo}
+func New(repo repository.LoanRepository) *LoanService {
+	return &LoanService{repo: repo}
 }
 
-func (l *loanEngine) Create(loan *entity.Loan) (*entity.Loan, error) {
+func (l *LoanService) Create(ctx context.Context, loan *entity.Loan) (*entity.Loan, error) {
 
 	// Calculate the ROI based on the loan amount and rate
 	loan.ROI = (float64(loan.Rate) / 100) * float64(loan.Amount)
@@ -38,32 +41,36 @@ func (l *loanEngine) Create(loan *entity.Loan) (*entity.Loan, error) {
 	// Set the loan state to Proposed
 	loan.State = &entity.Proposed{}
 
-	l.repo.InsertLoan(*loan)
+	rloan, err := l.repo.InsertLoan(ctx, *loan)
 
-	return loan, nil
+	return &rloan, err
 }
 
-func (l *loanEngine) Get(id int64) (*entity.Loan, error) {
-	loan, err := l.repo.GetLoan(id)
+func (l *LoanService) Get(ctx context.Context, id int64) (*entity.Loan, error) {
+	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
+		log.Printf("error while get loan, %v", err)
 		return nil, err
 	}
 
 	return &loan, nil
 }
 
-func (l *loanEngine) Approve(id int64, approval entity.Approval) (*entity.Loan, error) {
+func (l *LoanService) Approve(ctx context.Context, id int64, approval entity.Approval) (*entity.Loan, error) {
 	if approval.Empty() {
 		return nil, nil
 	}
 
-	loan, err := l.repo.GetLoan(id)
+	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
+	prevState := loan.State
+
 	if loan.State.Approve(&loan, approval) {
-		if err := l.repo.UpdateLoanApproval(loan, approval); err != nil {
+		approval.LoanID = id
+		if err := l.repo.UpdateLoanApproval(ctx, loan, approval, prevState); err != nil {
 			return nil, err
 		}
 
@@ -73,40 +80,53 @@ func (l *loanEngine) Approve(id int64, approval entity.Approval) (*entity.Loan, 
 	return nil, nil
 }
 
-func (l *loanEngine) Invest(id int64, investment entity.Investment) (*entity.Loan, error) {
+func (l *LoanService) Invest(ctx context.Context, id int64, investment entity.Investment) (*entity.Loan, error) {
 
 	if investment.Empty() {
 		return nil, nil
 	}
 
-	loan, err := l.repo.GetLoan(id)
+	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if loan.State.Invest(&loan, investment) {
-		if err := l.repo.UpdateLoanInvestment(loan, investment); err != nil {
-			return nil, err
-		}
+	prevState := loan.State
 
+	if loan.State.Invest(&loan, investment) {
+		investment.LoanID = id
+		if prevState.String() == loan.State.String() {
+			if err := l.repo.InsertLoanInvestment(ctx, investment); err != nil {
+				return nil, err
+			}
+
+		} else {
+
+			if err := l.repo.UpdateLoanInvestmentAndState(ctx, loan, investment, prevState); err != nil {
+				return nil, err
+			}
+		}
 		return &loan, nil
 	}
 
 	return nil, nil
 }
 
-func (l *loanEngine) Disburse(id int64, disbursement entity.Approval) (*entity.Loan, error) {
+func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement entity.Approval) (*entity.Loan, error) {
 	if disbursement.Empty() {
 		return nil, nil
 	}
 
-	loan, err := l.repo.GetLoan(id)
+	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
+	prevState := loan.State
+
 	if loan.State.Disburse(&loan, disbursement) {
-		if err := l.repo.UpdateLoanApproval(loan, disbursement); err != nil {
+		disbursement.LoanID = id
+		if err := l.repo.UpdateLoanApproval(ctx, loan, disbursement, prevState); err != nil {
 			return nil, err
 		}
 
@@ -116,14 +136,14 @@ func (l *loanEngine) Disburse(id int64, disbursement entity.Approval) (*entity.L
 	return nil, nil
 }
 
-func (l *loanEngine) GetByState(state string) ([]entity.Loan, error) {
-	return l.repo.GetLoansByState(state)
+func (l *LoanService) GetByState(ctx context.Context, state string) ([]entity.Loan, error) {
+	return l.repo.GetLoansByState(ctx, state)
 }
 
-func (l *loanEngine) GetByBorrower(borrowerID int64) ([]entity.Loan, error) {
-	return l.repo.GetLoansByBorrower(borrowerID)
+func (l *LoanService) GetByBorrower(ctx context.Context, borrowerID int64) ([]entity.Loan, error) {
+	return l.repo.GetLoansByBorrower(ctx, borrowerID)
 }
 
-func (l *loanEngine) GetLoansByInvestor(investorID int64) ([]entity.Loan, error) {
-	return l.repo.GetLoansByInvestor(investorID)
+func (l *LoanService) GetLoansByInvestor(ctx context.Context, investorID int64) ([]entity.Loan, error) {
+	return l.repo.GetLoansByInvestor(ctx, investorID)
 }

@@ -143,3 +143,18 @@ func (d *Disbursed) Invest(loan *Loan, investment Investment) bool {
 func (d *Disbursed) Disburse(loan *Loan, approval Approval) bool {
 	return false
 }
+
+func StateOf(code string) State {
+	switch code {
+	case "PROPOSED":
+		return &Proposed{}
+	case "APPROVED":
+		return &Approved{}
+	case "INVESTED":
+		return &Invested{}
+	case "DISBURSED":
+		return &Disbursed{}
+	}
+
+	return &Proposed{}
+}

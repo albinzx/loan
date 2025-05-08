@@ -9,8 +9,8 @@ type Loan struct {
 	Amount             int64        `json:"amount"`
 	Rate               float64      `json:"rate"`
 	ROI                float64      `json:"roi"`
-	BorrowerID         string       `json:"borrower_id"`
-	AggrementLetterURL string       `json:"agreement_letter_url"`
+	BorrowerID         int64        `json:"borrower_id"`
+	AgreementLetterURL string       `json:"agreement_letter_url"`
 	Investments        []Investment `json:"investments"`
 	Approvals          []Approval   `json:"approvals"`
 	State              State        `json:"state"`
@@ -20,10 +20,9 @@ type Loan struct {
 // It contains information about the loan ID, investor ID, investment amount, and return on investment (ROI).
 // The Investment struct is used to track the investments made in a loan and calculate the ROI for each investment.
 type Investment struct {
-	LoanID     int64   `json:"loan_id"`
-	InvestorID int64   `json:"investor_id"`
-	Amount     int64   `json:"amount"`
-	ROI        float64 `json:"roi"`
+	LoanID     int64 `json:"loan_id"`
+	InvestorID int64 `json:"investor_id"`
+	Amount     int64 `json:"amount"`
 }
 
 // Approval represents an approval action taken by an employee on a loan.
