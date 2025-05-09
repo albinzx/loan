@@ -1,0 +1,256 @@
+openapi: 3.0.0
+info:
+  title: Loan Service API
+  version: 1.0.0
+  description: 'Loan Service API'
+servers:
+  - url: localhost
+paths:
+  /v1/loans:
+    post:
+      summary: create new loan
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  format: int64
+                rate:
+                  type: number
+                  format: double
+                borrower_id:
+                  type: integer
+                  format: int64
+                agreement_letter_url:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: successfull creation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '400':
+          description: invalid json request
+        '500':
+          description: server error
+    get:
+      summary: get loan by state or borrower or both
+      parameters:
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - PROPOSED
+              - APPROVED
+              - INVESTED
+              - DISBURSED
+        - name: borrower
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successfull
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Loan'
+        '400':
+          description: both parameter empty or invalid
+        '500':
+          description: server error
+  /v1/loans/{id}:
+    get:
+      summary: get loan by id
+      parameters:
+        - name: id
+          in: path
+          description: loan id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successfull
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '400':
+          description: invalid parameter loan id
+        '404':
+          description: loan not found
+        '500':
+          description: server error
+  /v1/loans/{id}/approve:
+    patch:
+      summary: approve loan
+      parameters:
+        - name: id
+          in: path
+          description: loan id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successfull
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '400':
+          description: invalid parameter loan id, invalid json request, or invalid action
+        '404':
+          description: loan not found
+        '500':
+          description: server error
+  /v1/loans/{id}/invest:
+    patch:
+      summary: invest loan
+      parameters:
+        - name: id
+          in: path
+          description: loan id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successfull
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '400':
+          description: invalid parameter loan id, invalid json request, or invalid action
+        '404':
+          description: loan not found
+        '500':
+          description: server error
+  /v1/loans/{id}/disburse:
+    patch:
+      summary: disburse loan
+      parameters:
+        - name: id
+          in: path
+          description: loan id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successfull
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '400':
+          description: invalid parameter loan id, invalid json request, or invalid action
+        '404':
+          description: loan not found
+        '500':
+          description: server error
+  /v1/investments/{id}:
+    get:
+      summary: get loan by investor
+      parameters:
+        - name: id
+          in: path
+          description: investor id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successfull
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Loan'
+        '400':
+          description: invalid parameter id
+        '500':
+          description: server error
+components:
+  schemas:
+    Approval:
+      type: object
+      properties:
+        employee_id:
+          type: integer
+          format: int64
+        date:
+          type: string
+          format: date
+        action:
+          type: string
+          enum:
+            - APPROVE
+            - DISBURSE
+        document_url:
+          type: string
+          format: uri
+    Investment:
+      type: object
+      properties:
+        investor_id:
+          type: integer
+          format: int64
+        amount:
+          type: integer
+          format: int64
+    Loan:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        amount:
+          type: integer
+          format: int64
+        rate:
+          type: number
+          format: double
+        roi:
+          type: number
+          format: double
+        borrower_id:
+          type: integer
+          format: int64
+        agreement_letter_url:
+          type: string
+          format: uri
+        investments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Investment'
+        approvals:
+          type: array
+          items:
+            $ref: '#/components/schemas/Approval'
+        state:
+          type: string
+          enum:
+            - PROPOSED
+            - APPROVED
+            - INVESTED
+            - DISBURSED
