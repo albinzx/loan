@@ -21,16 +21,15 @@ type Loan struct {
 
 // Investment is an investment model in request or response.
 type Investment struct {
-	LoanID     int64 `json:"loan_id"`
 	InvestorID int64 `json:"investor_id"`
 	Amount     int64 `json:"amount"`
 }
 
 // Approval is an approval model in request or response.
 type Approval struct {
-	LoanID      int64  `json:"loan_id"`
 	EmployeeID  int64  `json:"employee_id"`
 	Date        string `json:"date"`
+	Action      string `json:"action"`
 	DocumentURL string `json:"document_url"`
 }
 
@@ -75,7 +74,6 @@ func (a Approval) Empty() bool {
 // ToEntity converts approval model to entity
 func (a Approval) ToEntity() *entity.Approval {
 	return &entity.Approval{
-		LoanID:      a.LoanID,
 		EmployeeID:  a.EmployeeID,
 		Date:        time.Now(),
 		DocumentURL: a.DocumentURL,
@@ -90,7 +88,6 @@ func (i Investment) Empty() bool {
 // ToEntity converts investment model to entity
 func (i Investment) ToEntity() *entity.Investment {
 	return &entity.Investment{
-		LoanID:     i.LoanID,
 		InvestorID: i.InvestorID,
 		Amount:     i.Amount,
 	}
@@ -133,9 +130,9 @@ func ToLoanModel(l entity.Loan) Loan {
 // ToApprovalModel converts approval entity to model
 func ToApprovalModel(a entity.Approval) Approval {
 	return Approval{
-		LoanID:      a.LoanID,
 		EmployeeID:  a.EmployeeID,
 		Date:        a.Date.String(),
+		Action:      a.Action,
 		DocumentURL: a.DocumentURL,
 	}
 }
@@ -143,7 +140,6 @@ func ToApprovalModel(a entity.Approval) Approval {
 // ToInvestmentModel converts investment entity to model
 func ToInvestmentModel(i entity.Investment) Investment {
 	return Investment{
-		LoanID:     i.LoanID,
 		InvestorID: i.InvestorID,
 		Amount:     i.Amount,
 	}

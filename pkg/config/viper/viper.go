@@ -35,10 +35,6 @@ func (v *Config) init(path, file, ext string) error {
 	return nil
 }
 
-func (v *Config) Get(key string) interface{} {
-	return v.viper.Get(key)
-}
-
 func (v *Config) GetString(key string) string {
 	return v.viper.GetString(key)
 }

@@ -2,10 +2,17 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/albinzx/loan/entity"
+	"github.com/albinzx/loan/pkg/mailer"
 	"github.com/albinzx/loan/repository"
+)
+
+const (
+	EMAIL_SUBJECT = "Loan %d is invested"
+	EMAIL_MSG     = "Dear %s,\nPlease find the link of aggrement letter:%s\nThanks"
 )
 
 type LoanEngine interface {
@@ -29,10 +36,11 @@ type LoanEngine interface {
 
 type LoanService struct {
 	repo repository.LoanRepository
+	mail mailer.Mailer
 }
 
-func New(repo repository.LoanRepository) *LoanService {
-	return &LoanService{repo: repo}
+func New(repo repository.LoanRepository, mail mailer.Mailer) *LoanService {
+	return &LoanService{repo: repo, mail: mail}
 }
 
 func (l *LoanService) Create(ctx context.Context, loan *entity.Loan) (*entity.Loan, error) {
@@ -75,6 +83,7 @@ func (l *LoanService) Approve(ctx context.Context, id int64, approval *entity.Ap
 		return nil, err
 	}
 
+	approval.Action = entity.APPROVE
 	prevState := loan.State
 
 	if loan.State.Approve(loan, *approval) {
@@ -106,6 +115,8 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.I
 
 	if loan.State.Invest(loan, *investment) {
 		investment.LoanID = id
+
+		// loan state still approved, total invested hasn't reach the principal amount, just insert the investment
 		if prevState.String() == loan.State.String() {
 			if err := l.repo.InsertLoanInvestment(ctx, investment); err != nil {
 				log.Printf("error while adding loan investment, %v", err)
@@ -113,11 +124,30 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.I
 			}
 
 		} else {
-
+			// loan state changed to invested, insert the investment, change state and send email to investor
 			if err := l.repo.UpdateLoanInvestmentAndState(ctx, loan, investment, prevState); err != nil {
 				log.Printf("error while investing loan, %v", err)
 				return nil, err
 			}
+
+			// send email asynchronosly
+			go func() {
+				investors, err := l.repo.GetInvestorByLoanID(ctx, id)
+				if err != nil {
+					log.Printf("error while getting investors, %v", err)
+					return
+				}
+
+				subject := fmt.Sprintf(EMAIL_SUBJECT, id)
+				for _, investor := range investors {
+					l.mail.Send(ctx, mailer.Email{
+						Recipients: []string{investor.Email},
+						Subject:    subject,
+						Message:    fmt.Sprintf(EMAIL_MSG, investor.Name, loan.AgreementLetterURL),
+					})
+				}
+
+			}()
 		}
 		return loan, nil
 	}
@@ -136,6 +166,7 @@ func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement *enti
 		return nil, err
 	}
 
+	disbursement.Action = entity.DISBURSE
 	prevState := loan.State
 
 	if loan.State.Disburse(loan, *disbursement) {

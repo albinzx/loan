@@ -106,3 +106,8 @@ func (l *Loan) AddInvestment(i Investment) (bool, bool) {
 func (l *Loan) AddApproval(a Approval) {
 	l.Approvals = append(l.Approvals, a)
 }
+
+const (
+	APPROVE  = "APPROVE"
+	DISBURSE = "DISBURSE"
+)

@@ -69,7 +69,6 @@ func (a *Approved) Approve(loan *Loan, approval Approval) bool {
 // If total investments amount is equal with principal amount change state of the loan to the Invested state.
 func (a *Approved) Invest(loan *Loan, investment Investment) bool {
 	if added, completed := loan.AddInvestment(investment); added {
-		loan.Investments = append(loan.Investments, investment)
 		if completed {
 			loan.State = &Invested{}
 		}
