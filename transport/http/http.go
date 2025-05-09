@@ -32,7 +32,7 @@ func (h *LoanHTTPTransport) Handler(path string) http.Handler {
 	router.PATCH(fmt.Sprintf("%s/loans/:id/disburse", path), h.Disburse)
 	router.GET(fmt.Sprintf("%s/loans-state/:state", path), h.GetByState)
 	router.GET(fmt.Sprintf("%s/loans-borrower/:id", path), h.GetByBorrower)
-	router.GET(fmt.Sprintf("%s/loans-investor/:id", path), h.GetByInvestor)
+	router.GET(fmt.Sprintf("%s/investments/:id", path), h.GetByInvestor)
 
 	return router
 }
@@ -204,12 +204,13 @@ func (h *LoanHTTPTransport) Disburse(w http.ResponseWriter, r *http.Request, par
 func (h *LoanHTTPTransport) GetByState(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	state := params.ByName("state")
 
-	if state == "" {
+	entState := entity.StateOf(state)
+	if entState == nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	loanEntities, err := h.service.GetByState(r.Context(), entity.StateOf(state))
+	loanEntities, err := h.service.GetByState(r.Context(), entState)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

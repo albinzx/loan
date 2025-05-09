@@ -63,14 +63,6 @@ type Investor struct {
 	Email string
 }
 
-func (a Approval) Empty() bool {
-	return a.EmployeeID == 0 || a.Date.IsZero() && a.Action == "" && a.DocumentURL == ""
-}
-
-func (i Investment) Empty() bool {
-	return i.InvestorID == 0 || i.Amount == 0
-}
-
 // SumInvestment calculates the total amount of investments made in the loan.
 // It iterates through the Investments slice and sums up the Amount of each investment.
 func (l *Loan) SumInvestment() int64 {

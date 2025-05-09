@@ -2,6 +2,13 @@ package entity
 
 import "fmt"
 
+const (
+	STATE_PROPOSED  = "PROPOSED"
+	STATE_APPROVED  = "APPROVED"
+	STATE_INVESTED  = "INVESTED"
+	STATE_DISBURSED = "DISBURSED"
+)
+
 // State interface represents the state of a loan in the system.
 // It defines methods for approving, investing, and disbursing loans.
 // Each state implements these methods to define the behavior of the loan in that state.
@@ -23,7 +30,7 @@ type Proposed struct {
 
 // String returns the string representation of the Proposed state.
 func (p *Proposed) String() string {
-	return "PROPOSED"
+	return STATE_PROPOSED
 }
 
 // Approve allows for the approval of a loan in the Proposed state.
@@ -38,12 +45,12 @@ func (p *Proposed) Approve(loan *Loan, approval Approval) bool {
 }
 
 // Invest is not allowed in a loan in the Proposed state.
-func (p *Proposed) Invest(l *Loan, i Investment) bool {
+func (p *Proposed) Invest(loan *Loan, investment Investment) bool {
 	return false
 }
 
 // Disburse is not allowed in a loan in the Proposed state.
-func (p *Proposed) Disburse(l *Loan, a Approval) bool {
+func (p *Proposed) Disburse(loan *Loan, approval Approval) bool {
 	return false
 }
 
@@ -56,7 +63,7 @@ type Approved struct {
 
 // String returns the string representation of the Approved state.
 func (a *Approved) String() string {
-	return "APPROVED"
+	return STATE_APPROVED
 }
 
 // Approve is not allowed in a loan in the Approved state.
@@ -92,7 +99,7 @@ type Invested struct {
 
 // String returns the string representation of the Invested state.
 func (i *Invested) String() string {
-	return "INVESTED"
+	return STATE_INVESTED
 }
 
 // Approve is not allowed in a loan in the Invested state.
@@ -125,7 +132,7 @@ type Disbursed struct {
 
 // String returns the string representation of the Disbursed state.
 func (d *Disbursed) String() string {
-	return "DISBURSED"
+	return STATE_DISBURSED
 }
 
 // Approve is not allowed in a loan in the Disbursed state.
@@ -145,15 +152,15 @@ func (d *Disbursed) Disburse(loan *Loan, approval Approval) bool {
 
 func StateOf(code string) State {
 	switch code {
-	case "PROPOSED":
+	case STATE_PROPOSED:
 		return &Proposed{}
-	case "APPROVED":
+	case STATE_APPROVED:
 		return &Approved{}
-	case "INVESTED":
+	case STATE_INVESTED:
 		return &Invested{}
-	case "DISBURSED":
+	case STATE_DISBURSED:
 		return &Disbursed{}
 	}
 
-	return &Proposed{}
+	return nil
 }

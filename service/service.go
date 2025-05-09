@@ -73,10 +73,6 @@ func (l *LoanService) Get(ctx context.Context, id int64) (*entity.Loan, error) {
 }
 
 func (l *LoanService) Approve(ctx context.Context, id int64, approval *entity.Approval) (*entity.Loan, error) {
-	if approval.Empty() {
-		return nil, nil
-	}
-
 	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
 		log.Printf("error while getting loan, %v", err)
@@ -100,10 +96,6 @@ func (l *LoanService) Approve(ctx context.Context, id int64, approval *entity.Ap
 }
 
 func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.Investment) (*entity.Loan, error) {
-
-	if investment.Empty() {
-		return nil, nil
-	}
 
 	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
@@ -156,9 +148,6 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.I
 }
 
 func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement *entity.Approval) (*entity.Loan, error) {
-	if disbursement.Empty() {
-		return nil, nil
-	}
 
 	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
