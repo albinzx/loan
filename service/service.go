@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -13,6 +14,10 @@ import (
 const (
 	EMAIL_SUBJECT = "Loan %d is invested"
 	EMAIL_MSG     = "Dear %s,\nPlease find the link of aggrement letter:%s\nThanks"
+)
+
+var (
+	ErrInvalidStateAction = errors.New("Invalid action on loan state")
 )
 
 type LoanEngine interface {
@@ -80,6 +85,11 @@ func (l *LoanService) Approve(ctx context.Context, id int64, approval *entity.Ap
 		return nil, err
 	}
 
+	// loan not found
+	if loan == nil {
+		return nil, nil
+	}
+
 	approval.Action = entity.APPROVE
 	prevState := loan.State
 
@@ -94,7 +104,7 @@ func (l *LoanService) Approve(ctx context.Context, id int64, approval *entity.Ap
 		return loan, nil
 	}
 
-	return nil, nil
+	return nil, ErrInvalidStateAction
 }
 
 func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.Investment) (*entity.Loan, error) {
@@ -103,6 +113,11 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.I
 	if err != nil {
 		log.Printf("error while getting loan, %v", err)
 		return nil, err
+	}
+
+	// loan not found
+	if loan == nil {
+		return nil, nil
 	}
 
 	prevState := loan.State
@@ -148,7 +163,7 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.I
 		return loan, nil
 	}
 
-	return nil, nil
+	return nil, ErrInvalidStateAction
 }
 
 func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement *entity.Approval) (*entity.Loan, error) {
@@ -157,6 +172,11 @@ func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement *enti
 	if err != nil {
 		log.Printf("error while getting loan, %v", err)
 		return nil, err
+	}
+
+	// loan not found
+	if loan == nil {
+		return nil, nil
 	}
 
 	disbursement.Action = entity.DISBURSE
@@ -173,7 +193,7 @@ func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement *enti
 		return loan, nil
 	}
 
-	return nil, nil
+	return nil, ErrInvalidStateAction
 }
 
 func (l *LoanService) GetByInvestor(ctx context.Context, investorID int64) ([]entity.Loan, error) {

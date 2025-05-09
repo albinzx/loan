@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -124,13 +125,18 @@ func (h *LoanHTTPTransport) Approve(w http.ResponseWriter, r *http.Request, para
 	// call service to approve loan
 	res, err := h.service.Approve(r.Context(), loanID, approval.ToEntity())
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		if errors.Is(err, svc.ErrInvalidStateAction) {
+			// invalid state to be approved
+			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 
-	// invalid state to be approved
+	// loan not found
 	if res == nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -170,13 +176,18 @@ func (h *LoanHTTPTransport) Invest(w http.ResponseWriter, r *http.Request, param
 	// call service to invest loan
 	res, err := h.service.Invest(r.Context(), loanID, investment.ToEntity())
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		if errors.Is(err, svc.ErrInvalidStateAction) {
+			// invalid state to be invested
+			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 
-	// invalid state to be invested
+	// loan not found
 	if res == nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -216,13 +227,18 @@ func (h *LoanHTTPTransport) Disburse(w http.ResponseWriter, r *http.Request, par
 	// call service to disburse loan
 	res, err := h.service.Disburse(r.Context(), loanID, approval.ToEntity())
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		if errors.Is(err, svc.ErrInvalidStateAction) {
+			// invalid state to be disbursed
+			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 
-	// invalid state to be disbursed
+	// loan not found
 	if res == nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 

@@ -55,6 +55,9 @@ func (mr *MockRepository) GetLoan(ctx context.Context, id int64) (*entity.Loan, 
 	if id == 4 {
 		return &entity.Loan{ID: 4, Amount: 1000, State: &entity.Disbursed{}}, nil
 	}
+	if id == 10 {
+		return nil, nil
+	}
 
 	return &entity.Loan{ID: id, Amount: 1000, State: &entity.Proposed{}}, nil
 }
@@ -199,6 +202,19 @@ func TestLoanService_Get(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "Test not found",
+			fields: fields{
+				repo: &MockRepository{},
+				mail: &MockMailer{},
+			},
+			args: args{
+				ctx: context.Background(),
+				id:  10,
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
 			name: "Test get failed",
 			fields: fields{
 				repo: &MockRepository{},
@@ -248,6 +264,20 @@ func TestLoanService_Approve(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name: "Test not found",
+			fields: fields{
+				repo: &MockRepository{},
+				mail: &MockMailer{},
+			},
+			args: args{
+				ctx:      context.Background(),
+				id:       10,
+				approval: &entity.Approval{},
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
 			name: "Test approve success",
 			fields: fields{
 				repo: &MockRepository{},
@@ -278,7 +308,7 @@ func TestLoanService_Approve(t *testing.T) {
 				approval: &entity.Approval{},
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Test approve do nothing due to state already invested",
@@ -292,7 +322,7 @@ func TestLoanService_Approve(t *testing.T) {
 				approval: &entity.Approval{},
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Test approve do nothing due to state already disbursed",
@@ -306,7 +336,7 @@ func TestLoanService_Approve(t *testing.T) {
 				approval: &entity.Approval{},
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Test approve failed due to get loan error",
@@ -373,6 +403,20 @@ func TestLoanService_Invest(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name: "Test not found",
+			fields: fields{
+				repo: &MockRepository{},
+				mail: &MockMailer{},
+			},
+			args: args{
+				ctx:        context.Background(),
+				id:         10,
+				investment: &entity.Investment{},
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
 			name: "Test invest success, total investment still under principal amount, state still approved",
 			fields: fields{
 				repo: &MockRepository{},
@@ -422,7 +466,7 @@ func TestLoanService_Invest(t *testing.T) {
 				investment: &entity.Investment{},
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Test invest do nothing due to state already invested",
@@ -436,7 +480,7 @@ func TestLoanService_Invest(t *testing.T) {
 				investment: &entity.Investment{},
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Test invest do nothing due to state already disbursed",
@@ -450,7 +494,7 @@ func TestLoanService_Invest(t *testing.T) {
 				investment: &entity.Investment{},
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Test invest failed due to get loan error",
@@ -517,6 +561,20 @@ func TestLoanService_Disburse(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name: "Test not found",
+			fields: fields{
+				repo: &MockRepository{},
+				mail: &MockMailer{},
+			},
+			args: args{
+				ctx:          context.Background(),
+				id:           10,
+				disbursement: &entity.Approval{},
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
 			name: "Test disburse success",
 			fields: fields{
 				repo: &MockRepository{},
@@ -547,7 +605,7 @@ func TestLoanService_Disburse(t *testing.T) {
 				disbursement: &entity.Approval{},
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Test disburse do nothing due to state still approved",
@@ -561,7 +619,7 @@ func TestLoanService_Disburse(t *testing.T) {
 				disbursement: &entity.Approval{},
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Test disburse do nothing due to state already disbursed",
@@ -575,7 +633,7 @@ func TestLoanService_Disburse(t *testing.T) {
 				disbursement: &entity.Approval{},
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "Test disburse failed due to get loan error",
