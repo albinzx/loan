@@ -4,7 +4,7 @@
     "port": "3306",
     "user": "dev",
     "password": "dev",
-    "name": "amartha_loan"
+    "name": "loan"
   },
   "smtp": {
     "host": "smtp.gmail.com",
