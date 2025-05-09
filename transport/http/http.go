@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/albinzx/loan/entity"
 	svc "github.com/albinzx/loan/service"
+	"github.com/albinzx/loan/transport/model"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -22,23 +22,26 @@ func New(service svc.LoanEngine) *LoanHTTPTransport {
 
 func (h *LoanHTTPTransport) Handler(path string) http.Handler {
 	router := httprouter.New()
-	router.POST(fmt.Sprintf("%s/loan", path), h.Create)
-	router.GET(fmt.Sprintf("%s/loan/:id", path), h.Get)
+	router.POST(fmt.Sprintf("%s/loans", path), h.Create)
+	router.GET(fmt.Sprintf("%s/loans/:id", path), h.Get)
 
 	return router
 }
 
 func (h *LoanHTTPTransport) Create(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
-	loan := &entity.Loan{}
+	loan := &model.Loan{}
 	if err := json.NewDecoder(r.Body).Decode(loan); err != nil {
 
 		return
 	}
 
-	h.service.Create(r.Context(), loan)
+	res, err := h.service.Create(r.Context(), loan.ToEntity())
+	if err != nil {
 
-	json.NewEncoder(w).Encode(loan)
+	}
+
+	json.NewEncoder(w).Encode(model.ToLoanModel(*res))
 }
 
 func (h *LoanHTTPTransport) Get(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -47,7 +50,7 @@ func (h *LoanHTTPTransport) Get(w http.ResponseWriter, r *http.Request, params h
 
 	loan, _ := h.service.Get(r.Context(), loanID)
 
-	json.NewEncoder(w).Encode(loan)
+	json.NewEncoder(w).Encode(model.ToLoanModel(*loan))
 }
 
 func (h *LoanHTTPTransport) GetByState(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

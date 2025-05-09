@@ -14,17 +14,17 @@ type LoanEngine interface {
 	// Get retrieves a loan by its ID.
 	Get(context.Context, int64) (*entity.Loan, error)
 	// Approve approves a loan with the given ID and approval details.
-	Approve(context.Context, int64, entity.Approval) (*entity.Loan, error)
+	Approve(context.Context, int64, *entity.Approval) (*entity.Loan, error)
 	// Invest invests in a loan with the given ID and investment details.
-	Invest(context.Context, int64, entity.Investment) (*entity.Loan, error)
+	Invest(context.Context, int64, *entity.Investment) (*entity.Loan, error)
 	// Disburse disburses a loan with the given ID and disbursement details.
-	Disburse(context.Context, int64, entity.Approval) (*entity.Loan, error)
+	Disburse(context.Context, int64, *entity.Approval) (*entity.Loan, error)
 	// GetByState retrieves loans based on state.
 	GetByState(context.Context, entity.State) ([]entity.Loan, error)
 	// GetByBorrower retrieves loans by their borrower ID.
 	GetByBorrower(context.Context, int64) ([]entity.Loan, error)
 	// GetLoansByInvestor retrieves loans by investor ID
-	GetLoansByInvestor(context.Context, int64) ([]entity.Loan, error)
+	GetByInvestor(context.Context, int64) ([]entity.Loan, error)
 }
 
 type LoanService struct {
@@ -43,13 +43,15 @@ func (l *LoanService) Create(ctx context.Context, loan *entity.Loan) (*entity.Lo
 	// Set the loan state to Proposed
 	loan.State = &entity.Proposed{}
 
-	rloan, err := l.repo.InsertLoan(ctx, *loan)
+	id, err := l.repo.InsertLoan(ctx, loan)
 	if err != nil {
 		log.Printf("error while creating loan, %v", err)
 		return nil, err
 	}
 
-	return &rloan, nil
+	loan.ID = id
+
+	return loan, nil
 }
 
 func (l *LoanService) Get(ctx context.Context, id int64) (*entity.Loan, error) {
@@ -59,10 +61,10 @@ func (l *LoanService) Get(ctx context.Context, id int64) (*entity.Loan, error) {
 		return nil, err
 	}
 
-	return &loan, nil
+	return loan, nil
 }
 
-func (l *LoanService) Approve(ctx context.Context, id int64, approval entity.Approval) (*entity.Loan, error) {
+func (l *LoanService) Approve(ctx context.Context, id int64, approval *entity.Approval) (*entity.Loan, error) {
 	if approval.Empty() {
 		return nil, nil
 	}
@@ -75,20 +77,20 @@ func (l *LoanService) Approve(ctx context.Context, id int64, approval entity.App
 
 	prevState := loan.State
 
-	if loan.State.Approve(&loan, approval) {
+	if loan.State.Approve(loan, *approval) {
 		approval.LoanID = id
 		if err := l.repo.UpdateLoanApproval(ctx, loan, approval, prevState); err != nil {
 			log.Printf("error while approving loan, %v", err)
 			return nil, err
 		}
 
-		return &loan, nil
+		return loan, nil
 	}
 
 	return nil, nil
 }
 
-func (l *LoanService) Invest(ctx context.Context, id int64, investment entity.Investment) (*entity.Loan, error) {
+func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.Investment) (*entity.Loan, error) {
 
 	if investment.Empty() {
 		return nil, nil
@@ -102,7 +104,7 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment entity.In
 
 	prevState := loan.State
 
-	if loan.State.Invest(&loan, investment) {
+	if loan.State.Invest(loan, *investment) {
 		investment.LoanID = id
 		if prevState.String() == loan.State.String() {
 			if err := l.repo.InsertLoanInvestment(ctx, investment); err != nil {
@@ -117,13 +119,13 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment entity.In
 				return nil, err
 			}
 		}
-		return &loan, nil
+		return loan, nil
 	}
 
 	return nil, nil
 }
 
-func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement entity.Approval) (*entity.Loan, error) {
+func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement *entity.Approval) (*entity.Loan, error) {
 	if disbursement.Empty() {
 		return nil, nil
 	}
@@ -136,14 +138,14 @@ func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement entit
 
 	prevState := loan.State
 
-	if loan.State.Disburse(&loan, disbursement) {
+	if loan.State.Disburse(loan, *disbursement) {
 		disbursement.LoanID = id
 		if err := l.repo.UpdateLoanApproval(ctx, loan, disbursement, prevState); err != nil {
 			log.Printf("error while disbursing loan, %v", err)
 			return nil, err
 		}
 
-		return &loan, nil
+		return loan, nil
 	}
 
 	return nil, nil
@@ -157,6 +159,6 @@ func (l *LoanService) GetByBorrower(ctx context.Context, borrowerID int64) ([]en
 	return l.repo.GetLoansByBorrower(ctx, borrowerID)
 }
 
-func (l *LoanService) GetLoansByInvestor(ctx context.Context, investorID int64) ([]entity.Loan, error) {
+func (l *LoanService) GetByInvestor(ctx context.Context, investorID int64) ([]entity.Loan, error) {
 	return l.repo.GetLoansByInvestor(ctx, investorID)
 }

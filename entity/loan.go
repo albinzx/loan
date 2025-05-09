@@ -1,28 +1,30 @@
 package entity
 
+import "time"
+
 // Loan represents a loan entity in the system.
 // It contains information about the loan amount, rate, borrower, and associated investments and approvals.
 // The Loan struct is used to manage the loan lifecycle, including approval, investment, and disbursement processes.
 // It also includes methods for calculating the return on investment (ROI) and managing the loan state.
 type Loan struct {
-	ID                 int64        `json:"id"`
-	Amount             int64        `json:"amount"`
-	Rate               float64      `json:"rate"`
-	ROI                float64      `json:"roi"`
-	BorrowerID         int64        `json:"borrower_id"`
-	AgreementLetterURL string       `json:"agreement_letter_url"`
-	Investments        []Investment `json:"investments"`
-	Approvals          []Approval   `json:"approvals"`
-	State              State        `json:"state"`
+	ID                 int64
+	Amount             int64
+	Rate               float64
+	ROI                float64
+	BorrowerID         int64
+	AgreementLetterURL string
+	Investments        []Investment
+	Approvals          []Approval
+	State              State
 }
 
 // Investment represents an investment made by an investor in a loan.
 // It contains information about the loan ID, investor ID, investment amount, and return on investment (ROI).
 // The Investment struct is used to track the investments made in a loan and calculate the ROI for each investment.
 type Investment struct {
-	LoanID     int64 `json:"loan_id"`
-	InvestorID int64 `json:"investor_id"`
-	Amount     int64 `json:"amount"`
+	LoanID     int64
+	InvestorID int64
+	Amount     int64
 }
 
 // Approval represents an approval action taken by an employee on a loan.
@@ -30,39 +32,39 @@ type Investment struct {
 // The Approval is used to track the approval history of a loan and the actions taken by employees in the system.
 // It helps in maintaining a record of the approval process and the documents associated with it.
 type Approval struct {
-	LoanID      int64  `json:"loan_id"`
-	EmployeeID  int64  `json:"employee_id"`
-	Date        string `json:"date"`
-	Action      string `json:"action"`
-	DocumentURL string `json:"document_url"`
+	LoanID      int64
+	EmployeeID  int64
+	Date        time.Time
+	Action      string
+	DocumentURL string
 }
 
 // Employee represents an employee in the system.
 // It contains information about the employee ID, name, and role.
 type Employee struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-	Role string `json:"role"`
+	ID   int64
+	Name string
+	Role string
 }
 
 // Borrower represents a borrower in the system.
 // It contains information about the borrower ID, name, and credit limit.
 type Borrower struct {
-	ID    int64  `json:"id"`
-	Name  string `json:"name"`
-	Limit int64  `json:"limit"`
+	ID    int64
+	Name  string
+	Limit int64
 }
 
 // Investor represents an investor in the system.
 // It contains information about the investor ID and name.
 type Investor struct {
-	ID    int64  `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID    int64
+	Name  string
+	Email string
 }
 
 func (a Approval) Empty() bool {
-	return a.EmployeeID == 0 || a.Date == "" && a.Action == "" && a.DocumentURL == ""
+	return a.EmployeeID == 0 || a.Date.IsZero() && a.Action == "" && a.DocumentURL == ""
 }
 
 func (i Investment) Empty() bool {

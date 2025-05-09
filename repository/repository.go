@@ -10,17 +10,19 @@ import (
 
 type LoanRepository interface {
 	// InsertLoan inserts a new loan into the repository.
-	InsertLoan(ctx context.Context, loan entity.Loan) (entity.Loan, error)
+	InsertLoan(ctx context.Context, loan *entity.Loan) (int64, error)
 	// GetLoan retrieves a loan by its ID from the repository.
-	GetLoan(ctx context.Context, id int64) (entity.Loan, error)
+	GetLoan(ctx context.Context, id int64) (*entity.Loan, error)
 	// UpdateState updates an existing loan state in the repository.
-	UpdateState(ctx context.Context, loan entity.Loan, previousState entity.State) error
+	UpdateState(ctx context.Context, loan *entity.Loan, previousState entity.State) error
 	// UpdateLoanInvestment inserts a new investment into the repository.
-	InsertLoanInvestment(ctx context.Context, investment entity.Investment) error
+	InsertLoanInvestment(ctx context.Context, investment *entity.Investment) error
 	// UpdateLoanInvestment inserts a new investment into the repository.
-	UpdateLoanInvestmentAndState(ctx context.Context, loan entity.Loan, investment entity.Investment, previousState entity.State) error
+	UpdateLoanInvestmentAndState(ctx context.Context, loan *entity.Loan,
+		investment *entity.Investment, previousState entity.State) error
 	// UpdateLoanApproval inserts a new approval into the repository.
-	UpdateLoanApproval(ctx context.Context, loan entity.Loan, approval entity.Approval, previousState entity.State) error
+	UpdateLoanApproval(ctx context.Context, loan *entity.Loan,
+		approval *entity.Approval, previousState entity.State) error
 	// GetLoansByState retrieves loans by their state from the repository.
 	GetLoansByState(ctx context.Context, state entity.State) ([]entity.Loan, error)
 	// GetLoansByBorrower retrieves loans by their borrower ID from the repository.
@@ -42,43 +44,43 @@ const (
 		"(SELECT 1 FROM loan_investment i WHERE i.loan_id = l.id and i.investor_id = ?)"
 )
 
-type MysqlLoanRepository struct {
+type LoanMysqlRepository struct {
 	db *sql.DB
 }
 
-func New(db *sql.DB) *MysqlLoanRepository {
-	return &MysqlLoanRepository{db: db}
+func New(db *sql.DB) *LoanMysqlRepository {
+	return &LoanMysqlRepository{db: db}
 }
 
 // InsertLoan inserts a new loan into the repository.
-func (r *MysqlLoanRepository) InsertLoan(ctx context.Context, loan entity.Loan) (entity.Loan, error) {
+func (r *LoanMysqlRepository) InsertLoan(ctx context.Context, loan *entity.Loan) (int64, error) {
 	res, err := r.db.ExecContext(ctx, insertLoan, loan.Amount, loan.Rate, loan.ROI,
 		loan.BorrowerID, loan.AgreementLetterURL, loan.State.String())
 	if err != nil {
 		log.Printf("error while inserting loan, %v", err)
-		return loan, err
+		return 0, err
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
 		log.Printf("error while getting loan ID, %v", err)
-		return loan, err
+		return 0, err
 	}
 
 	loan.ID = id
 
-	return loan, nil
+	return id, nil
 }
 
 // GetLoan retrieves a loan by its ID from the repository.
-func (r *MysqlLoanRepository) GetLoan(ctx context.Context, id int64) (entity.Loan, error) {
+func (r *LoanMysqlRepository) GetLoan(ctx context.Context, id int64) (*entity.Loan, error) {
 	loan := entity.Loan{ID: id}
 	var state string
 	if err := r.db.QueryRowContext(ctx, selectLoanByID, id).Scan(&loan.Amount, &loan.Rate, &loan.ROI,
 		&loan.BorrowerID, &loan.AgreementLetterURL, &state); err != nil {
 
 		log.Printf("error while getting loan, %v", err)
-		return loan, err
+		return nil, err
 	}
 
 	loan.State = entity.StateOf(state)
@@ -86,7 +88,7 @@ func (r *MysqlLoanRepository) GetLoan(ctx context.Context, id int64) (entity.Loa
 	rows, err := r.db.QueryContext(ctx, selectInvestmentByLoanID, id)
 	if err != nil {
 		log.Printf("error while getting loan investments, %v", err)
-		return loan, err
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -99,16 +101,16 @@ func (r *MysqlLoanRepository) GetLoan(ctx context.Context, id int64) (entity.Loa
 
 	if err = rows.Err(); err != nil {
 		log.Printf("error while scanning loan investments rows, %v", err)
-		return loan, err
+		return nil, err
 	}
 
 	loan.Investments = invs
 
-	return loan, nil
+	return &loan, nil
 }
 
 // UpdateState updates an existing loan state in the repository.
-func (r *MysqlLoanRepository) UpdateState(ctx context.Context, loan entity.Loan, previousState entity.State) error {
+func (r *LoanMysqlRepository) UpdateState(ctx context.Context, loan *entity.Loan, previousState entity.State) error {
 	if _, err := r.db.ExecContext(ctx, updateLoanState, loan.State.String(), loan.ID, previousState.String()); err != nil {
 		log.Printf("error while updating loan state, %v", err)
 		return err
@@ -118,7 +120,7 @@ func (r *MysqlLoanRepository) UpdateState(ctx context.Context, loan entity.Loan,
 }
 
 // InsertLoanInvestment inserts a new investment into the repository.
-func (r *MysqlLoanRepository) InsertLoanInvestment(ctx context.Context, investment entity.Investment) error {
+func (r *LoanMysqlRepository) InsertLoanInvestment(ctx context.Context, investment *entity.Investment) error {
 	if _, err := r.db.ExecContext(ctx, insertInvestment, investment.LoanID, investment.InvestorID, investment.Amount); err != nil {
 		log.Printf("error while inserting loan investment, %v", err)
 		return err
@@ -128,8 +130,8 @@ func (r *MysqlLoanRepository) InsertLoanInvestment(ctx context.Context, investme
 }
 
 // UpdateLoanInvestmentAndState inserts a new investment and update loan state into the repository.
-func (r *MysqlLoanRepository) UpdateLoanInvestmentAndState(ctx context.Context, loan entity.Loan,
-	investment entity.Investment, previousState entity.State) error {
+func (r *LoanMysqlRepository) UpdateLoanInvestmentAndState(ctx context.Context, loan *entity.Loan,
+	investment *entity.Investment, previousState entity.State) error {
 
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -155,8 +157,8 @@ func (r *MysqlLoanRepository) UpdateLoanInvestmentAndState(ctx context.Context, 
 }
 
 // UpdateLoanApproval inserts a new approval into the repository.
-func (r *MysqlLoanRepository) UpdateLoanApproval(ctx context.Context, loan entity.Loan,
-	approval entity.Approval, previousState entity.State) error {
+func (r *LoanMysqlRepository) UpdateLoanApproval(ctx context.Context, loan *entity.Loan,
+	approval *entity.Approval, previousState entity.State) error {
 
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -183,7 +185,7 @@ func (r *MysqlLoanRepository) UpdateLoanApproval(ctx context.Context, loan entit
 }
 
 // GetLoansByState retrieves loans by their state from the repository.
-func (r *MysqlLoanRepository) GetLoansByState(ctx context.Context, state entity.State) ([]entity.Loan, error) {
+func (r *LoanMysqlRepository) GetLoansByState(ctx context.Context, state entity.State) ([]entity.Loan, error) {
 
 	rows, err := r.db.QueryContext(ctx, selectLoanByState, state.String())
 	if err != nil {
@@ -208,7 +210,7 @@ func (r *MysqlLoanRepository) GetLoansByState(ctx context.Context, state entity.
 }
 
 // GetLoansByBorrower retrieves loans by their borrower ID from the repository.
-func (r *MysqlLoanRepository) GetLoansByBorrower(ctx context.Context, borrowerID int64) ([]entity.Loan, error) {
+func (r *LoanMysqlRepository) GetLoansByBorrower(ctx context.Context, borrowerID int64) ([]entity.Loan, error) {
 	rows, err := r.db.QueryContext(ctx, selectLoanByBorrowerID, borrowerID)
 	if err != nil {
 		log.Printf("error while getting loans by borrower ID, %v", err)
@@ -236,7 +238,7 @@ func (r *MysqlLoanRepository) GetLoansByBorrower(ctx context.Context, borrowerID
 }
 
 // GetLoansByInvestor retrieves loans by their investor ID from the repository.
-func (r *MysqlLoanRepository) GetLoansByInvestor(ctx context.Context, investorID int64) ([]entity.Loan, error) {
+func (r *LoanMysqlRepository) GetLoansByInvestor(ctx context.Context, investorID int64) ([]entity.Loan, error) {
 	rows, err := r.db.QueryContext(ctx, selectLoanByInvestorID, investorID)
 	if err != nil {
 		log.Printf("error while getting loans by investor ID, %v", err)
