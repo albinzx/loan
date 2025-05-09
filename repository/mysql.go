@@ -21,7 +21,10 @@ const (
 	selectLoanByBorrowerID   = "SELECT id, amount, rate, roi, agreement_letter_url, state FROM loan WHERE borrower_id = ?"
 	selectLoanByInvestorID   = "SELECT id, amount, rate, roi, borrower_id, agreement_letter_url, state FROM loan l WHERE EXISTS " +
 		"(SELECT 1 FROM loan_investment i WHERE i.loan_id = l.id and i.investor_id = ?)"
-	selectInvestor = "SELECT name, email FROM investor i JOIN loan_investment li ON i.id = li.investor_id WHERE li.loan_id = ?"
+	selectInvestor  = "SELECT name, email FROM investor i JOIN loan_investment li ON i.id = li.investor_id WHERE li.loan_id = ?"
+	selectLoanBy    = "SELECT id, amount, rate, roi, borrower_id, agreement_letter_url, state FROM loan WHERE TRUE"
+	whereState      = " AND state = ?"
+	whereBorrowerID = " AND borrower_id = ?"
 )
 
 type LoanMysqlRepository struct {
@@ -292,4 +295,44 @@ func (r *LoanMysqlRepository) GetInvestorByLoanID(ctx context.Context, loanID in
 	}
 
 	return investors, nil
+}
+
+func (r *LoanMysqlRepository) GetLoansByStateOrBorrower(ctx context.Context, state entity.State, borrowerID int64) ([]entity.Loan, error) {
+	var rows *sql.Rows
+	var err error
+
+	query := selectLoanBy
+	if state != nil && borrowerID > 0 {
+		query = query + whereState + whereBorrowerID
+		rows, err = r.db.QueryContext(ctx, query, state.String(), borrowerID)
+	} else if state != nil {
+		query = query + whereState
+		rows, err = r.db.QueryContext(ctx, query, state.String())
+	} else {
+		query = query + whereBorrowerID
+		rows, err = r.db.QueryContext(ctx, query, borrowerID)
+	}
+
+	if err != nil {
+		log.Printf("error while getting loans by state, %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	loans := make([]entity.Loan, 0)
+	for rows.Next() {
+		loan := entity.Loan{}
+		var stt string
+		rows.Scan(&loan.ID, &loan.Amount, &loan.Rate, &loan.ROI, &loan.BorrowerID, &loan.AgreementLetterURL, &stt)
+		loan.State = entity.StateOf(stt)
+
+		loans = append(loans, loan)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("error while scanning loans rows, %v", err)
+		return nil, err
+	}
+
+	return loans, nil
 }

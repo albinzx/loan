@@ -39,5 +39,8 @@ func main() {
 	svc := service.New(repo, mail)
 	trp := http.New(svc)
 
-	trp.Serve("127.0.0.1:8080", "/v1")
+	trp.Serve(
+		cfg.GetString("http.address"),
+		cfg.GetString("http.path"),
+	)
 }

@@ -26,12 +26,10 @@ type LoanEngine interface {
 	Invest(context.Context, int64, *entity.Investment) (*entity.Loan, error)
 	// Disburse disburses a loan with the given ID and disbursement details.
 	Disburse(context.Context, int64, *entity.Approval) (*entity.Loan, error)
-	// GetByState retrieves loans based on state.
-	GetByState(context.Context, entity.State) ([]entity.Loan, error)
-	// GetByBorrower retrieves loans by their borrower ID.
-	GetByBorrower(context.Context, int64) ([]entity.Loan, error)
 	// GetLoansByInvestor retrieves loans by investor ID
 	GetByInvestor(context.Context, int64) ([]entity.Loan, error)
+	// GetByStateOrBorrower retrieves loans based on state or borrower id.
+	GetByStateOrBorrower(context.Context, entity.State, int64) ([]entity.Loan, error)
 }
 
 type LoanService struct {
@@ -178,14 +176,10 @@ func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement *enti
 	return nil, nil
 }
 
-func (l *LoanService) GetByState(ctx context.Context, state entity.State) ([]entity.Loan, error) {
-	return l.repo.GetLoansByState(ctx, state)
-}
-
-func (l *LoanService) GetByBorrower(ctx context.Context, borrowerID int64) ([]entity.Loan, error) {
-	return l.repo.GetLoansByBorrower(ctx, borrowerID)
-}
-
 func (l *LoanService) GetByInvestor(ctx context.Context, investorID int64) ([]entity.Loan, error) {
 	return l.repo.GetLoansByInvestor(ctx, investorID)
+}
+
+func (l *LoanService) GetByStateOrBorrower(ctx context.Context, state entity.State, borrowerID int64) ([]entity.Loan, error) {
+	return l.repo.GetLoansByStateOrBorrower(ctx, state, borrowerID)
 }

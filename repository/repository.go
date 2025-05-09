@@ -29,4 +29,6 @@ type LoanRepository interface {
 	GetLoansByInvestor(ctx context.Context, investorID int64) ([]entity.Loan, error)
 	// GetInvestorEmailByLoanID retrieves investor emails by loan ID theirs invested.
 	GetInvestorByLoanID(ctx context.Context, loanID int64) ([]entity.Investor, error)
+	// GetLoansByStateOrBorrower retrieves loans by their state and or borrower from the repository.
+	GetLoansByStateOrBorrower(ctx context.Context, state entity.State, borrowerID int64) ([]entity.Loan, error)
 }

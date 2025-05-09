@@ -11,5 +11,9 @@
     "port": "587",
     "user": "loan@gmail.com",
     "password": "dev"
+  },
+  "http": {
+    "address": "127.0.0.1:8080",
+    "path": "/v1"
   }
 }

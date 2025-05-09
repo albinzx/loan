@@ -104,6 +104,10 @@ func (mr *MockRepository) GetInvestorByLoanID(ctx context.Context, loanID int64)
 	return nil, nil
 }
 
+func (mr *MockRepository) GetLoansByStateOrBorrower(ctx context.Context, state entity.State, borrowerID int64) ([]entity.Loan, error) {
+	return nil, nil
+}
+
 func TestLoanService_Create(t *testing.T) {
 	type fields struct {
 		repo repository.LoanRepository

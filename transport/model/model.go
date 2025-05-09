@@ -131,7 +131,7 @@ func ToLoanModel(l entity.Loan) Loan {
 func ToApprovalModel(a entity.Approval) Approval {
 	return Approval{
 		EmployeeID:  a.EmployeeID,
-		Date:        a.Date.String(),
+		Date:        a.Date.Format(time.DateOnly),
 		Action:      a.Action,
 		DocumentURL: a.DocumentURL,
 	}
