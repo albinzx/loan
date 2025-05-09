@@ -51,6 +51,7 @@ func (l *LoanService) Create(ctx context.Context, loan *entity.Loan) (*entity.Lo
 	// Set the loan state to Proposed
 	loan.State = &entity.Proposed{}
 
+	// store loan entity
 	id, err := l.repo.InsertLoan(ctx, loan)
 	if err != nil {
 		log.Printf("error while creating loan, %v", err)
@@ -63,6 +64,7 @@ func (l *LoanService) Create(ctx context.Context, loan *entity.Loan) (*entity.Lo
 }
 
 func (l *LoanService) Get(ctx context.Context, id int64) (*entity.Loan, error) {
+	// get loan entity
 	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
 		log.Printf("error while getting loan, %v", err)
@@ -73,6 +75,7 @@ func (l *LoanService) Get(ctx context.Context, id int64) (*entity.Loan, error) {
 }
 
 func (l *LoanService) Approve(ctx context.Context, id int64, approval *entity.Approval) (*entity.Loan, error) {
+	// get loan entity
 	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
 		log.Printf("error while getting loan, %v", err)
@@ -83,6 +86,7 @@ func (l *LoanService) Approve(ctx context.Context, id int64, approval *entity.Ap
 	prevState := loan.State
 
 	if loan.State.Approve(loan, *approval) {
+		// loan can be approved, update state and insert approval data
 		approval.LoanID = id
 		if err := l.repo.UpdateLoanApproval(ctx, loan, approval, prevState); err != nil {
 			log.Printf("error while approving loan, %v", err)
@@ -96,7 +100,7 @@ func (l *LoanService) Approve(ctx context.Context, id int64, approval *entity.Ap
 }
 
 func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.Investment) (*entity.Loan, error) {
-
+	// get loan entity
 	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
 		log.Printf("error while getting loan, %v", err)
@@ -108,7 +112,7 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.I
 	if loan.State.Invest(loan, *investment) {
 		investment.LoanID = id
 
-		// loan state still approved, total invested hasn't reach the principal amount, just insert the investment
+		// loan state still approved, total invested hasn't reach the principal amount, just store investment data
 		if prevState.String() == loan.State.String() {
 			if err := l.repo.InsertLoanInvestment(ctx, investment); err != nil {
 				log.Printf("error while adding loan investment, %v", err)
@@ -116,7 +120,7 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.I
 			}
 
 		} else {
-			// loan state changed to invested, insert the investment, change state and send email to investor
+			// loan state changed to invested, store investment data, change state and send email to investor
 			if err := l.repo.UpdateLoanInvestmentAndState(ctx, loan, investment, prevState); err != nil {
 				log.Printf("error while investing loan, %v", err)
 				return nil, err
@@ -124,12 +128,14 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.I
 
 			// send email asynchronosly
 			go func() {
+				// get investor data
 				investors, err := l.repo.GetInvestorByLoanID(ctx, id)
 				if err != nil {
 					log.Printf("error while getting investors, %v", err)
 					return
 				}
 
+				// send email to each investor
 				subject := fmt.Sprintf(EMAIL_SUBJECT, id)
 				for _, investor := range investors {
 					l.mail.Send(ctx, mailer.Email{
@@ -148,7 +154,7 @@ func (l *LoanService) Invest(ctx context.Context, id int64, investment *entity.I
 }
 
 func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement *entity.Approval) (*entity.Loan, error) {
-
+	// get loan entity
 	loan, err := l.repo.GetLoan(ctx, id)
 	if err != nil {
 		log.Printf("error while getting loan, %v", err)
@@ -159,6 +165,7 @@ func (l *LoanService) Disburse(ctx context.Context, id int64, disbursement *enti
 	prevState := loan.State
 
 	if loan.State.Disburse(loan, *disbursement) {
+		// loan state change to disbursed, insert disbursement data and change state
 		disbursement.LoanID = id
 		if err := l.repo.UpdateLoanApproval(ctx, loan, disbursement, prevState); err != nil {
 			log.Printf("error while disbursing loan, %v", err)
